@@ -48,7 +48,6 @@ void BubbleSort(std::vector<unsigned int> &v)
 				std::swap(v[j], v[j + 1]);
 				draw = 1;
 				cv.notify_one();
-				//std::this_thread::sleep_for(std::chrono::milliseconds(10));
 				cv.wait(lk, []{ return draw == 0; });
 			}
 	done = 1;
@@ -71,15 +70,69 @@ void InsertionSort(std::vector<unsigned int> &v)
 	cv.notify_one();
 	return;
 }
+
+void Merge(std::vector<unsigned int> &v, const unsigned int &l, const unsigned int &m, const unsigned int &r)
+{
+	auto pom = new unsigned int[r-l];
+	for(auto i = 0; i < r - l; i++)
+		pom[i] = std::move(v[l + i]);
+	unsigned int x = 0, y = m - l, i = l;
+	while(x < m - l && y < r - l)
+	{
+		if(pom[x] == pom[y])
+		{
+			v[i++] = std::move(pom[x++]);
+			v[i++] = std::move(pom[y++]);
+		}
+		else
+			if(pom[y] < pom[x])
+				v[i++] = std::move(pom[y++]);
+			else
+				v[i++] = std::move(pom[x++]);
+	}
+	if(x == m - l)
+		while(y < r - l)
+			v[i++] = std::move(pom[y++]);
+	else if(y == r - l)
+		while(x < m - l)
+			v[i++] = std::move(pom[x++]);
+	delete[] pom;
+}
+
+void MergeSort(std::vector<unsigned int> &v)
+{
+	std::unique_lock<std::mutex> lk(mtx2);
+	int curr_size;
+	int l,m,r;
+	for(curr_size = 1; curr_size < v.size(); curr_size *= 2)
+		for(l = 0; l < v.size(); l += 2 * curr_size)
+		{
+			m = l + curr_size;
+			if(m > v.size())
+				m = v.size();
+			r = l + 2 * curr_size;
+			if(r > v.size())
+				r = v.size();
+			Merge(v, l, m, r);
+			draw = 1;
+			cv.notify_one();
+			cv.wait(lk, []{ return draw == 0; });
+		}
+	done = 1;
+	cv.notify_one();
+	return;
+}
+
+
 int main()
 {
 	srand((unsigned)time(NULL));
-	int w_heigth=300, w_width=600;
-	std::vector<unsigned int> v(100);
+	int w_heigth=400, w_width=800;
+	std::vector<unsigned int> v(500);
 	for(auto&& x : v)
 		x = rand() % w_heigth + 1;
 	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
-	std::thread tsort(InsertionSort, std::ref(v));
+	std::thread tsort(MergeSort, std::ref(v));
 	tsort.detach();
 	std::thread tdraw(drawarray, std::ref(window), std::ref(w_width), std::ref(w_heigth), std::ref(v));	
 	tdraw.join();
