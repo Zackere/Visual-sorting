@@ -10,13 +10,13 @@
 
 int draw = 0;
 int done = 0;
-std::mutex mtx1, mtx2;
+std::mutex mtx;
 std::condition_variable cv;
 
 void drawarray(sf::RenderWindow &w, int wi, int he, std::vector<unsigned int> &v)
 {
-	std::unique_lock<std::mutex> lk(mtx1);
-	while(1)	
+	std::unique_lock<std::mutex> lk(mtx);
+	while(1)
 	{
 		cv.wait(lk, []{ return draw == 1 || done == 1; });
 		if(done == 1)
@@ -40,7 +40,7 @@ void drawarray(sf::RenderWindow &w, int wi, int he, std::vector<unsigned int> &v
 
 void BubbleSort(std::vector<unsigned int> &v)
 {
-	std::unique_lock<std::mutex> lk(mtx2);
+	std::unique_lock<std::mutex> lk(mtx);
 	for(auto i=0; i<v.size() - 1; i++)
 		for(auto j=0; j<v.size() - 1; j++)
 			if(v[j] > v[j + 1])
@@ -57,7 +57,7 @@ void BubbleSort(std::vector<unsigned int> &v)
 
 void InsertionSort(std::vector<unsigned int> &v)
 {
-	std::unique_lock<std::mutex> lk(mtx2);
+	std::unique_lock<std::mutex> lk(mtx);
 	for(auto i=1; i < v.size(); i++)
 		for(auto j = i; i> 0 && v[j - 1] > v[j]; j--)
 		{
@@ -73,7 +73,7 @@ void InsertionSort(std::vector<unsigned int> &v)
 
 void Merge(std::vector<unsigned int> &v, const unsigned int &l, const unsigned int &m, const unsigned int &r)
 {
-	auto pom = new unsigned int[r-l];
+	auto pom = new unsigned int[r - l];
 	for(auto i = 0; i < r - l; i++)
 		pom[i] = std::move(v[l + i]);
 	unsigned int x = 0, y = m - l, i = l;
@@ -101,7 +101,7 @@ void Merge(std::vector<unsigned int> &v, const unsigned int &l, const unsigned i
 
 void MergeSort(std::vector<unsigned int> &v)
 {
-	std::unique_lock<std::mutex> lk(mtx2);
+	std::unique_lock<std::mutex> lk(mtx);
 	int curr_size;
 	int l,m,r;
 	for(curr_size = 1; curr_size < v.size(); curr_size *= 2)
