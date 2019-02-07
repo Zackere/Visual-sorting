@@ -61,8 +61,7 @@ int main()
 	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
 	std::thread tsort(BubbleSort, std::ref(v));
 	tsort.detach();
-	std::thread tdraw(drawarray, std::ref(window), std::ref(w_width), std::ref(w_heigth), std::ref(v));
-	
+	std::thread tdraw(drawarray, std::ref(window), std::ref(w_width), std::ref(w_heigth), std::ref(v));	
 	tdraw.join();
 	while(window.isOpen())
 	{
