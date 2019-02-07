@@ -127,7 +127,7 @@ void MergeSort(std::vector<unsigned int> &v)
 int main()
 {
 	srand((unsigned)time(NULL));
-	int w_heigth=400, w_width=800;
+	int w_heigth=700, w_width=1000;
 	std::vector<unsigned int> v(500);
 	for(auto&& x : v)
 		x = rand() % w_heigth + 1;
