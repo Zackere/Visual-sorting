@@ -15,6 +15,7 @@ std::condition_variable cv;
 
 void drawarray(sf::RenderWindow &w, int wi, int he, std::vector<unsigned int> &v)
 {
+	w.setActive(true);
 	std::unique_lock<std::mutex> lk(mtx);
 	while(1)
 	{
@@ -132,6 +133,7 @@ int main()
 	for(auto&& x : v)
 		x = rand() % w_heigth + 1;
 	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
+	window.setActive(false);
 	std::thread tsort(MergeSort, std::ref(v));
 	tsort.detach();
 	std::thread tdraw(drawarray, std::ref(window), std::ref(w_width), std::ref(w_heigth), std::ref(v));	
