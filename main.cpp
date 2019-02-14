@@ -60,7 +60,7 @@ void InsertionSort(std::vector<unsigned int> &v)
 {
 	std::unique_lock<std::mutex> lk(mtx);
 	for(auto i=1; i < v.size(); i++)
-		for(auto j = i; i> 0 && v[j - 1] > v[j]; j--)
+		for(auto j = i; j > 0 && v[j - 1] > v[j]; j--)
 		{
 			std::swap(v[j], v[j-1]);
 			draw = 1;
