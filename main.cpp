@@ -154,9 +154,9 @@ int main()
 	v.shrink_to_fit();
 	for(auto&& x : v)
         x.value = rand() % w_heigth + 1;
-    auto maxv = (*std::max_element(v.begin(), v.end(), [](elem &x, elem &y){ return x.value < y.value; })).value;
-    for(auto&& x : v)
-        x.color = getRainbowColor((double)x.value / (double)maxv);
+	auto maxv = (*std::max_element(v.begin(), v.end(), [](elem &x, elem &y){ return x.value < y.value; })).value;
+    	for(auto&& x : v)
+        	x.color = getRainbowColor((double)x.value / (double)maxv);
 	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
 	window.setActive(false);
 	std::thread tsort(InsertionSort, std::ref(v));
