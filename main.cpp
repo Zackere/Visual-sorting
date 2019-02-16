@@ -21,7 +21,7 @@ typedef struct elem
 
 sf::Color getRainbowColor(double x)
 {
-    if(x < 0) return sf::Color::Black;
+    if(x < 0) return sf::Color::Red;
     if(x > 1) return sf::Color::Yellow;
     x *= 5.f;
     double frac = x;
