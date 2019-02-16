@@ -21,53 +21,17 @@ typedef struct elem
 
 sf::Color getRainbowColor(double x)
 {
-    if(x >= 5)  return sf::Color::Yellow;
-    if(x <= 0) return sf::Color::Red;
-    sf::Color ret(255.f, 0, 0);
-    if(x <= 1 && x >= 0)
-    {
-        ret.b += 255.f * x;
-        return ret;
-    }
-    else
-    {
-        ret.b = 255.f;
-        x -= 1;
-    }
-    if(x <= 1 && x >= 0)
-    {
-        ret.r -= 255.f * x;
-        return ret;
-    }
-    else
-    {
-        ret.r = 0;
-        x -= 1;
-    }
-    if(x <= 1 && x >= 0)
-    {
-
-        ret.g += 255.f * x;
-        return ret;
-    }
-    else
-    {
-        ret.g = 255.f;
-        x -= 1;
-    }
-    if(x <= 1 && x >= 0)
-    {
-        ret.b -= 255.f * x;
-        return ret;
-    }
-    else
-    {
-        ret.b = 0;
-        x -= 1;
-    }
-    ret.r += 255.f * x;
-    return ret;
-
+    if(x < 0) return sf::Color::Black;
+    if(x > 1) return sf::Color::Yellow;
+    x *= 5.f;
+    double frac = x;
+    while(frac > 1.f)
+        frac--;
+    if(x > 4) return sf::Color(255.f * frac, 255.f, 0);
+    if(x > 3) return sf::Color(0, 255.f, 255.f * (1.f - frac));
+    if(x > 2) return sf::Color(0, 255.f * frac, 255.f);
+    if(x > 1) return sf::Color(255.f * (1.f - frac), 0, 255.f);
+    return sf::Color(255.f, 0, 255.f * frac);
 }
 
 void drawarray(sf::RenderWindow &w, int wi, int he, std::vector<elem> &v)
@@ -190,9 +154,9 @@ int main()
 	v.shrink_to_fit();
 	for(auto&& x : v)
         x.value = rand() % w_heigth + 1;
-    auto pom = std::max_element(v.begin(), v.end(), [](elem &x, elem &y){ return x.value < y.value; });
+    auto maxv = (*std::max_element(v.begin(), v.end(), [](elem &x, elem &y){ return x.value < y.value; })).value;
     for(auto&& x : v)
-        x.color = getRainbowColor(5.f * x.value / (*pom).value);
+        x.color = getRainbowColor((double)x.value / (double)maxv);
 	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
 	window.setActive(false);
 	std::thread tsort(InsertionSort, std::ref(v));
