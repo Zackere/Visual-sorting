@@ -1,63 +1,211 @@
 #include <SFML/Graphics.hpp>
-#include <list>
-#include <utility>
-#include <math.h>
+#include <vector>
+#include <stdlib.h>
+#include <time.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 #include <iostream>
-#include "wave_source.h"
 
-void draw(sf::RenderWindow &w, int wi, int he, std::list<wave_source> &fields, double res, double dt)
+int draw = 0;
+int done = 0;
+std::mutex mtx;
+std::condition_variable cv;
+
+typedef struct elem
 {
-    if(fields.empty()) return;
-    sf::RectangleShape c(sf::Vector2f(res,res));
-    double col;
-    for_each(fields.begin(), fields.end(), [&](wave_source &s){ s.gettime() += dt; });
-    for(int i=0; i<wi; i+=res)
+    unsigned int value;
+    sf::Color color;
+}elem;
+
+sf::Color getRainbowColor(double x)
+{
+    if(x >= 5)  return sf::Color::Yellow;
+    if(x <= 0) return sf::Color::Red;
+    sf::Color ret(255.f, 0, 0);
+    if(x <= 1 && x >= 0)
     {
-        for(int j=0;j<he;j+=res)
-        {
-            col = 0.f;
-            for_each(fields.begin(), fields.end(), [&](wave_source &s){
-                     double r = sqrt((s.getxpos() - i) * (s.getxpos() - i) + (s.getypos() - j) * (s.getypos() - j));
-                     col += sin(s.getomega() * s.gettime() - r * s.getk())/(double)fields.size();
-                     });
-            col *= 255.f;
-            if(col > 0)
-                c.setFillColor(sf::Color(255.f, col, 0));
-            else
-                c.setFillColor(sf::Color(255.f + col, 0, -col));
-            c.setPosition(i,j);
-            w.draw(c);
-        }
+        ret.b += 255.f * x;
+        return ret;
     }
+    else
+    {
+        ret.b = 255.f;
+        x -= 1;
+    }
+    if(x <= 1 && x >= 0)
+    {
+        ret.r -= 255.f * x;
+        return ret;
+    }
+    else
+    {
+        ret.r = 0;
+        x -= 1;
+    }
+    if(x <= 1 && x >= 0)
+    {
+
+        ret.g += 255.f * x;
+        return ret;
+    }
+    else
+    {
+        ret.g = 255.f;
+        x -= 1;
+    }
+    if(x <= 1 && x >= 0)
+    {
+        ret.b -= 255.f * x;
+        return ret;
+    }
+    else
+    {
+        ret.b = 0;
+        x -= 1;
+    }
+    ret.r += 255.f * x;
+    return ret;
+
 }
+
+void drawarray(sf::RenderWindow &w, int wi, int he, std::vector<elem> &v)
+{
+	w.setActive(true);
+	std::unique_lock<std::mutex> lk(mtx);
+	while(1)
+	{
+		cv.wait(lk, []{ return draw == 1 || done == 1; });
+		if(done == 1)
+			return;
+		w.clear(sf::Color::Black);
+		sf::RectangleShape rec;
+		float rec_width = (float)wi / (float)v.size();
+		for(auto i=0; i<v.size(); i++)
+		{
+		    rec.setFillColor(v[i].color);
+			rec.setPosition(i*rec_width, he - v[i].value);
+			rec.setSize(sf::Vector2<float>(rec_width, v[i].value));
+			w.draw(rec);
+		}
+		w.display();
+		draw = 0;
+		cv.notify_one();
+	}
+	return;
+}
+
+void BubbleSort(std::vector<elem> &v)
+{
+	std::unique_lock<std::mutex> lk(mtx);
+	for(auto i=0; i<v.size() - 1; i++)
+		for(auto j=0; j<v.size() - 1; j++)
+			if(v[j].value > v[j + 1].value)
+			{
+				std::swap(v[j], v[j + 1]);
+				draw = 1;
+				cv.notify_one();
+				cv.wait(lk, []{ return draw == 0; });
+			}
+	done = 1;
+	cv.notify_one();
+	return;
+}
+
+void InsertionSort(std::vector<elem> &v)
+{
+	std::unique_lock<std::mutex> lk(mtx);
+	for(auto i=1; i < v.size(); i++)
+		for(auto j = i; j > 0 && v[j - 1].value > v[j].value; j--)
+		{
+			std::swap(v[j], v[j-1]);
+			draw = 1;
+			cv.notify_one();
+			cv.wait(lk, []{ return draw == 0; });
+		}
+	done = 1;
+	cv.notify_one();
+	return;
+}
+
+void Merge(std::vector<elem> &v, const unsigned int &l, const unsigned int &m, const unsigned int &r)
+{
+	auto pom = new elem[r - l];
+	for(auto i = 0; i < r - l; i++)
+		pom[i] = std::move(v[l + i]);
+	unsigned int x = 0, y = m - l, i = l;
+	while(x < m - l && y < r - l)
+	{
+		if(pom[x].value == pom[y].value)
+		{
+			v[i++] = std::move(pom[x++]);
+			v[i++] = std::move(pom[y++]);
+		}
+		else
+			if(pom[y].value < pom[x].value)
+				v[i++] = std::move(pom[y++]);
+			else
+				v[i++] = std::move(pom[x++]);
+	}
+	if(x == m - l)
+		while(y < r - l)
+			v[i++] = std::move(pom[y++]);
+	else if(y == r - l)
+		while(x < m - l)
+			v[i++] = std::move(pom[x++]);
+	delete[] pom;
+}
+
+void MergeSort(std::vector<elem> &v)
+{
+	std::unique_lock<std::mutex> lk(mtx);
+	int curr_size;
+	int l,m,r;
+	for(curr_size = 1; curr_size < v.size(); curr_size *= 2)
+		for(l = 0; l < v.size(); l += 2 * curr_size)
+		{
+			m = l + curr_size;
+			if(m > v.size())
+				m = v.size();
+			r = l + 2 * curr_size;
+			if(r > v.size())
+				r = v.size();
+			Merge(v, l, m, r);
+			draw = 1;
+			cv.notify_one();
+			cv.wait(lk, []{ return draw == 0; });
+		}
+	done = 1;
+	cv.notify_one();
+	return;
+}
+
 
 int main()
 {
-    int w_width = 600, w_heigth = 600;
-    double res = 3.f;
-    sf::Clock clock;
-    clock.restart();
-    std::list<wave_source> fields;
-    sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "SFML works!");
-
-    while (window.isOpen())
-    {
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                window.close();
-            else if(event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::R)
-                fields.clear();
-            else if(event.type == sf::Event::MouseButtonPressed)
-                if(sf::Mouse::getPosition(window).x > 0 && sf::Mouse::getPosition(window).x < w_width && sf::Mouse::getPosition(window).y > 0 && sf::Mouse::getPosition(window).y < w_heigth)
-                fields.push_front(wave_source(floor((double)sf::Mouse::getPosition(window).x/res)*res, floor((double)sf::Mouse::getPosition(window).y/res)*res, 0.1f, 10.f));
-        }
-        window.clear();
-        sf::sleep(sf::seconds(0.02) - clock.getElapsedTime());
-        draw(window, w_width, w_heigth, fields, res, clock.restart().asSeconds());
-        window.display();
-    }
-
-    return 0;
+	srand((unsigned)time(NULL));
+	int w_heigth=700, w_width=1000;
+	std::vector<elem> v(500);
+	v.shrink_to_fit();
+	for(auto&& x : v)
+        x.value = rand() % w_heigth + 1;
+    auto pom = std::max_element(v.begin(), v.end(), [](elem &x, elem &y){ return x.value < y.value; });
+    for(auto&& x : v)
+        x.color = getRainbowColor(5.f * x.value / (*pom).value);
+	sf::RenderWindow window(sf::VideoMode(w_width, w_heigth), "Sorting");
+	window.setActive(false);
+	std::thread tsort(InsertionSort, std::ref(v));
+	tsort.detach();
+	std::thread tdraw(drawarray, std::ref(window), std::ref(w_width), std::ref(w_heigth), std::ref(v));
+	tdraw.join();
+	while(window.isOpen())
+	{
+		sf::Event event;
+		while(window.pollEvent(event))
+			if(event.type == sf::Event::KeyPressed &&
+					event.key.code == sf::Keyboard::Escape)
+				window.close();
+	}
+	return 0;
 }
