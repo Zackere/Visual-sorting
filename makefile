@@ -1,7 +1,7 @@
 CC=clang
 SFML=/usr/local
 CFLAGS=-Wall -Werror -pedantic -std=c++11
-LFLAGS=-lsfml-graphics -lsfml-window -lsfml-system -lc++ -lpthread
+LFLAGS=-lsfml-graphics -lsfml-window -lsfml-system -lstdc++ -lpthread
 TARGET=sfml-app
 FILES=main.o
 
